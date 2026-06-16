@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sendflow · Dashboard de Suporte</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --yellow:  #FFDE07;
+      --black:   #030404;
+      --navy:    #032040;
+      --white:   #FDFCF7;
+      --gray-lt: #EAEAEA;
+      --gray-md: #B3B3B3;
+      --purple:  #A259FF;
+      --red:     #DC2626;
+      --green:   #16A34A;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Poppins', sans-serif; background: var(--white); color: var(--black); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--black); color: var(--white);
+      padding: 14px 28px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-mark {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--yellow); color: var(--black);
+      font-weight: 800; font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-title { font-size: 15px; font-weight: 700; }
+    .logo-title span { color: var(--yellow); }
+    .logo-sub { font-size: 10px; color: var(--gray-md); margin-top: 1px; }
+    .header-right { text-align: right; display: flex; align-items: center; gap: 14px; }
+    .header-info { text-align: right; }
+    .header-total { font-size: 13px; font-weight: 700; color: var(--yellow); }
+    .header-update { font-size: 10px; color: var(--gray-md); margin-top: 2px; }
+    .btn-refresh {
+      background: #1a1a1a; border: 1.5px solid #333; color: var(--gray-md);
+      font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600;
+      padding: 7px 14px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      transition: border-color .15s, color .15s, background .15s;
+      white-space: nowrap;
+    }
+    .btn-refresh:hover { border-color: var(--yellow); color: var(--yellow); background: #111; }
+    .btn-refresh.spinning .refresh-icon { display: inline-block; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Tabs ── */
+    nav { background: var(--black); border-top: 1px solid #1a1a1a; padding: 0 28px; display: flex; gap: 4px; }
+    .tab-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--gray-md); font-family: 'Poppins', sans-serif;
+      font-size: 12px; font-weight: 600; padding: 10px 14px;
+      border-bottom: 3px solid transparent;
+      transition: color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--white); }
+    .tab-btn.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+
+    /* ── Content ── */
+    main { padding: 24px 28px; max-width: 1280px; margin: 0 auto; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Date label ── */
+    .date-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .6px;
+      text-transform: uppercase; color: var(--gray-md); margin-bottom: 14px;
+    }
+
+    /* ── Metric cards ── */
+    .cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .metric-card {
+      background: var(--white); border: 1.5px solid var(--gray-lt);
+      border-top: 3px solid var(--yellow); border-radius: 12px; padding: 18px 20px;
+    }
+    .metric-label { font-size: 10px; font-weight: 700; color: var(--gray-md); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .metric-value { font-size: 44px; font-weight: 800; color: var(--black); line-height: 1; }
+    .metric-sub { font-size: 11px; color: var(--gray-md); margin-top: 4px; font-weight: 500; }
+
+    /* ── Charts ── */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .chart-card { background: var(--white); border: 1.5px solid var(--gray-lt); border-radius: 12px; padding: 20px; }
+    .chart-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 14px; }
+    .chart-wrap { position: relative; height: 230px; }
+
+    /* ── Agents grid ── */
+    .section-card { background: var(--white); border: 1.5px solid var(--gray-lt); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 14px; }
+    .agents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+    .agent-card {
+      border: 1.5px solid var(--gray-lt); border-radius: 10px; padding: 14px 16px;
+      text-align: center; cursor: pointer;
+      transition: border-color .15s, box-shadow .15s, transform .1s;
+    }
+    .agent-card:hover { border-color: var(--yellow); box-shadow: 0 4px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
+    .agent-card.top { border-color: var(--yellow); background: #FFFDE0; }
+    .agent-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    .agent-role { font-size: 9px; font-weight: 600; color: var(--purple); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
+    .agent-count { font-size: 28px; font-weight: 800; color: var(--navy); line-height: 1; }
+    .agent-unit { font-size: 10px; color: var(--gray-md); font-weight: 500; margin-top: 1px; }
+    .agent-channels { font-size: 9px; color: var(--gray-md); margin-top: 6px; }
+    .mini-bar { height: 3px; background: var(--gray-lt); border-radius: 2px; margin-top: 8px; }
+    .mini-bar-fill { height: 100%; background: var(--yellow); border-radius: 2px; }
+    .agent-hint { font-size: 9px; color: var(--gray-md); margin-top: 5px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(3,4,4,.55); backdrop-filter: blur(3px);
+      z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 16px; width: 100%; max-width: 520px;
+      max-height: 80vh; display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .modal-header {
+      padding: 20px 24px 16px; border-bottom: 1.5px solid var(--gray-lt);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-sub { font-size: 11px; color: var(--gray-md); margin-top: 1px; }
+    .modal-close {
+      width: 30px; height: 30px; border-radius: 8px; border: none;
+      background: var(--gray-lt); cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .modal-close:hover { background: #d0d0d0; }
+    .modal-body { overflow-y: auto; padding: 16px 24px 24px; flex: 1; }
+    .modal-ticket {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--gray-lt);
+    }
+    .modal-ticket:last-child { border-bottom: none; }
+    .ch-badge {
+      font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      flex-shrink: 0; margin-top: 1px; text-transform: uppercase; letter-spacing: .3px;
+    }
+    .ch-badge.fin   { background: #FFFDE0; color: #8a6f00; }
+    .ch-badge.sendi { background: #F3ECFF; color: var(--purple); }
+    .ch-badge.dev   { background: #E6EEF7; color: var(--navy); }
+    .ticket-link {
+      font-size: 12px; font-weight: 600; color: var(--black);
+      text-decoration: none; line-height: 1.4;
+    }
+    .ticket-link:hover { color: var(--purple); text-decoration: underline; }
+    .modal-empty { font-size: 12px; color: var(--gray-md); text-align: center; padding: 20px 0; }
+
+    /* ── Topics ── */
+    .topics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .topic-card { background: var(--white); border: 1.5px solid var(--gray-lt); border-radius: 12px; padding: 20px; }
+    .channel-tag {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 12px;
+    }
+    .channel-tag.sendi { background: #F3ECFF; color: var(--purple); }
+    .channel-tag.dev   { background: #E6EEF7; color: var(--navy); }
+    .topic-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--gray-lt); }
+    .topic-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .topic-num {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topic-num.sendi { background: var(--purple); color: #fff; }
+    .topic-num.dev   { background: var(--navy); color: #fff; }
+    .topic-tema { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+    .topic-desc { font-size: 11px; color: var(--gray-md); line-height: 1.4; }
+    .topic-cnt  { font-size: 10px; font-weight: 600; color: var(--purple); margin-top: 2px; display: block; }
+
+    .training-card { background: var(--white); border: 1.5px solid var(--gray-lt); border-radius: 12px; padding: 20px; }
+    .training-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--gray-lt); }
+    .training-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .training-icon { font-size: 24px; flex-shrink: 0; }
+    .training-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .training-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--gray-md); margin-top: 6px; margin-bottom: 2px; }
+    .training-txt { font-size: 11px; color: #555; line-height: 1.4; }
+
+    /* ── Weekly tab ── */
+    .week-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-mini { background: var(--white); border: 1.5px solid var(--gray-lt); border-radius: 10px; padding: 14px 16px; }
+    .stat-mini-val { font-size: 28px; font-weight: 800; color: var(--navy); }
+    .stat-mini-lbl { font-size: 10px; color: var(--gray-md); font-weight: 600; margin-top: 2px; }
+    .week-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .week-top-list { display: flex; flex-direction: column; gap: 8px; }
+    .week-top-item { display: flex; align-items: center; gap: 10px; }
+    .week-top-name { font-size: 12px; font-weight: 700; width: 90px; flex-shrink: 0; }
+    .week-top-bar-wrap { flex: 1; height: 8px; background: var(--gray-lt); border-radius: 4px; }
+    .week-top-bar { height: 100%; background: var(--yellow); border-radius: 4px; }
+    .week-top-val { font-size: 11px; font-weight: 700; color: var(--navy); width: 28px; text-align: right; }
+    .channel-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .ch-total { border: 1.5px solid var(--gray-lt); border-radius: 10px; padding: 12px 14px; text-align: center; }
+    .ch-total-val { font-size: 22px; font-weight: 800; color: var(--navy); }
+    .ch-total-lbl { font-size: 10px; color: var(--gray-md); font-weight: 600; margin-top: 2px; }
+
+    /* ── Progress tab ── */
+    .progress-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .month-group { margin-bottom: 28px; }
+    .month-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray-md); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--gray-lt); }
+    .timeline { padding-left: 14px; border-left: 2px solid var(--gray-lt); }
+    .tl-item { position: relative; padding: 0 0 14px 16px; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-dot { position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); border: 2px solid var(--white); box-shadow: 0 0 0 1.5px var(--yellow); }
+    .tl-date { font-size: 10px; color: var(--gray-md); font-weight: 500; margin-bottom: 1px; }
+    .tl-link { font-size: 13px; font-weight: 600; color: var(--black); text-decoration: none; line-height: 1.4; display: block; }
+    .tl-link:hover { color: var(--purple); text-decoration: underline; }
+    .tl-author { font-size: 10px; color: var(--purple); font-weight: 600; margin-top: 2px; }
+
+    @media (max-width: 768px) {
+      .cards-row, .charts-row, .topics-grid, .progress-stats, .week-stats, .week-grid { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+      nav { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">SF</div>
+    <div>
+      <div class="logo-title"><span>Sendflow</span> · Dashboard de Suporte</div>
+      <div class="logo-sub">Sendi CS · Gerado automaticamente</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn-refresh" id="btn-refresh" onclick="liveRefresh()">
+      <span class="refresh-icon">↻</span> Atualizar
+    </button>
+    <div class="header-info">
+      <div class="header-total">37 tickets · hoje</div>
+      <div class="header-update">Gerado em: 15/06/2026 às 21:10</div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="overview">📈 Visão Geral</button>
+  <button class="tab-btn" data-tab="weekly">📅 Consolidado Semanal</button>
+  <button class="tab-btn" data-tab="topics">💬 Tópicos &amp; Treinamento</button>
+  <button class="tab-btn" data-tab="progress">🚀 Progresso da Ferramenta</button>
+</nav>
+
+<main>
+
+  <!-- TAB 1: Visão Geral -->
+  <div id="tab-overview" class="tab-pane active">
+    <div class="date-label">Hoje · Segunda-feira, 15 de junho de 2026</div>
+
+    <div class="cards-row">
+      <div class="metric-card">
+        <div class="metric-label">cs-financeiro</div>
+        <div class="metric-value" id="val-fin">7</div>
+        <div class="metric-sub">tickets hoje</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">cs-sendi-duvidas</div>
+        <div class="metric-value" id="val-sendi">17</div>
+        <div class="metric-sub">tickets hoje</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">dev-sendi-suporte</div>
+        <div class="metric-value" id="val-dev">13</div>
+        <div class="metric-sub">tickets hoje</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">Tickets por Atendente · Hoje</div>
+        <div class="chart-wrap"><canvas id="c-agents"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Distribuição por Canal · Hoje</div>
+        <div class="chart-wrap"><canvas id="c-channels"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">Atendentes em campo hoje <span style="font-size:10px;color:var(--gray-md);font-weight:500;text-transform:none;letter-spacing:0">— clique para ver os tickets</span></div>
+      <div class="agents-grid" id="agents-grid"></div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Consolidado Semanal -->
+  <div id="tab-weekly" class="tab-pane">
+    <div class="date-label">Semana de 08/06 a 15/06/2026</div>
+
+    <div class="week-stats">
+      <div class="stat-mini">
+        <div class="stat-mini-val">131</div>
+        <div class="stat-mini-lbl">Total de tickets</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">63</div>
+        <div class="stat-mini-lbl">cs-sendi-duvidas</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">41</div>
+        <div class="stat-mini-lbl">dev-sendi-suporte</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">27</div>
+        <div class="stat-mini-lbl">cs-financeiro</div>
+      </div>
+    </div>
+
+    <div class="week-grid">
+      <div class="chart-card">
+        <div class="chart-title">Tickets por dia · por canal</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="c-weekly"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="section-title" style="margin-bottom:14px">Top atendentes na semana</div>
+        <div class="week-top-list" id="week-top-list"></div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title">Totais por canal</div>
+      <div class="channel-totals">
+        <div class="ch-total">
+          <div class="ch-total-val">63</div>
+          <div class="ch-total-lbl">#cs-sendi-duvidas</div>
+        </div>
+        <div class="ch-total">
+          <div class="ch-total-val">41</div>
+          <div class="ch-total-lbl">#dev-sendi-suporte</div>
+        </div>
+        <div class="ch-total">
+          <div class="ch-total-val">27</div>
+          <div class="ch-total-lbl">#cs-financeiro</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Tópicos & Treinamento -->
+  <div id="tab-topics" class="tab-pane">
+    <div class="topics-grid">
+      <div class="topic-card">
+        <div class="channel-tag sendi">#cs-sendi-duvidas</div>
+        <div class="section-title">Tópicos de hoje</div>
+        <div id="topics-duvidas"></div>
+      </div>
+      <div class="topic-card">
+        <div class="channel-tag dev">#dev-sendi-suporte</div>
+        <div class="section-title">Tópicos de hoje</div>
+        <div id="topics-suporte"></div>
+      </div>
+    </div>
+    <div class="training-card">
+      <div class="section-title">💡 Sugestões de Treinamento para o Time</div>
+      <div id="training-list"></div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Progresso da Ferramenta -->
+  <div id="tab-progress" class="tab-pane">
+    <div class="date-label" style="margin-bottom:16px">Canal #dev-sendi-progresso · Atualizações de produto</div>
+
+    <div class="progress-stats">
+      <div class="stat-mini">
+        <div class="stat-mini-val">52</div>
+        <div class="stat-mini-lbl">Entregas desde maio</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">23</div>
+        <div class="stat-mini-lbl">Entregas em junho</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">28</div>
+        <div class="stat-mini-lbl">Entregas em maio</div>
+      </div>
+      <div class="stat-mini">
+        <div class="stat-mini-val">4</div>
+        <div class="stat-mini-lbl">Devs contribuindo</div>
+      </div>
+    </div>
+
+    <div id="progress-list"></div>
+  </div>
+
+</main>
+
+<!-- Agent drill-down modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ── Live refresh ──────────────────────────────────────────────────────────────
+async function liveRefresh() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  try {
+    const todayTS = getTodayBRTTimestamp();
+    const [finMsgs, sendiMsgs, devMsgs] = await Promise.all([
+      fetchAllMessages(CHANNELS.fin,   todayTS),
+      fetchAllMessages(CHANNELS.sendi, todayTS),
+      fetchAllMessages(CHANNELS.dev,   todayTS),
+    ]);
+    const agents = processMessages({ fin: finMsgs, sendi: sendiMsgs, dev: devMsgs });
+    renderOverview(agents);
+    const now = new Date();
+    const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    document.querySelector('.header-update').textContent = `Atualizado às ${hhmm}`;
+  } catch (e) {
+    alert('Erro ao buscar dados do Slack:\n' + e.message + '\n\nVerifique se a variável SLACK_TOKEN está configurada no Vercel.');
+  } finally {
+    btn.classList.remove('spinning');
+    btn.disabled = false;
+  }
+}
+
+// Midnight BRT (UTC-3) timestamp for today
+function getTodayBRTTimestamp() {
+  const now = new Date();
+  const brt = new Date(now.getTime() - 3 * 3600000); // shift to BRT
+  const midnight = new Date(Date.UTC(brt.getUTCFullYear(), brt.getUTCMonth(), brt.getUTCDate(), 3, 0, 0));
+  return Math.floor(midnight.getTime() / 1000);
+}
+
+// Paginated fetch from /api/slack proxy
+async function fetchAllMessages(channelId, oldest) {
+  let messages = [];
+  let cursor = null;
+  do {
+    const p = new URLSearchParams({ action: 'history', channel: channelId, oldest: String(oldest), limit: '200' });
+    if (cursor) p.set('cursor', cursor);
+    const r = await fetch('/api/slack?' + p.toString());
+    if (!r.ok) throw new Error(`HTTP ${r.status} ao buscar canal ${channelId}`);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Erro desconhecido da API Slack');
+    messages = messages.concat(data.messages || []);
+    cursor = data.response_metadata?.next_cursor || null;
+  } while (cursor);
+  return messages;
+}
+
+// Strip Slack markdown and link syntax from message text
+function cleanText(t) {
+  return (t || '')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/<mailto:[^|>]+\|([^>]+)>/g, '$1')
+    .replace(/<https?:[^|>]+\|([^>]+)>/g, '$1')
+    .replace(/<@[A-Z0-9]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Build AGENTS_TODAY structure from raw Slack messages
+function processMessages({ fin, sendi, dev }) {
+  const map = {};
+  function add(msgs, chKey) {
+    msgs.forEach(msg => {
+      if (msg.subtype) return;           // skip join/bot messages
+      const team = TEAM_MEMBERS[msg.user];
+      if (!team) return;                 // skip non-team (Michael etc.)
+      if (!map[msg.user]) map[msg.user] = { ...team, fin: 0, sendi: 0, dev: 0, total: 0, tickets: [] };
+      map[msg.user][chKey]++;
+      map[msg.user].total++;
+      map[msg.user].tickets.push({ title: cleanText(msg.text), ch: chKey, ts: msg.ts });
+    });
+  }
+  add(fin,   'fin');
+  add(sendi, 'sendi');
+  add(dev,   'dev');
+  return Object.values(map).sort((a, b) => b.total - a.total);
+}
+
+// ── Config ───────────────────────────────────────────────────────────────────
+const SLACK_WORKSPACE = 'sendflow'; // ← altere se o workspace tiver outro nome
+
+// Mapeamento Slack user ID → info do time (evita precisar de users:read.email)
+const TEAM_MEMBERS = {
+  'U07TG512L48': { name: 'Gustavo',    role: 'Atendente CS' },
+  'U0911AQGX41': { name: 'Andressa',   role: 'Atendente CS' },
+  'U0B315C9V0E': { name: 'Braulio',    role: 'Atendente CS' },
+  'U0B3XFQN5Q8': { name: 'Esdras',     role: 'Atendente CS' },
+  'U08RCEX91K2': { name: 'V. Mendes',  role: 'Atendente CS' },
+  'U08E54XD5M1': { name: 'Raissa',     role: 'Supervisora'  },
+  'U07TG4ZQBG8': { name: 'Nara',       role: 'Coordenadora' },
+  'U07SVRTGRDJ': { name: 'Shi',        role: 'Head CS'      },
+  'U081W5HN5RU': { name: 'Ezequiel',   role: 'Dev'          },
+  'U081N7VSMQX': { name: 'Thiago G.',  role: 'Dev'          },
+  'U082FEDH1ED': { name: 'Thierry',    role: 'Dev'          },
+  'U081W5J774N': { name: 'Guilherme',  role: 'Dev'          },
+  // Adicione novos membros aqui no formato 'SLACK_ID': { name, role }
+};
+
+const CHANNELS = {
+  fin:   'C07T30JTG0M',
+  sendi: 'C07T5BKDPEW',
+  dev:   'C07TYG13J11',
+  prog:  'C082HG5S6QN',
+};
+
+function slackLink(channelId, ts) {
+  return `https://${SLACK_WORKSPACE}.slack.com/archives/${channelId}/p${ts.replace('.', '')}`;
+}
+
+// ── Data: hoje (15/06/2026) ──────────────────────────────────────────────────
+const AGENTS_TODAY = [
+  {
+    name: "Gustavo", role: "Atendente CS", fin: 0, sendi: 7, dev: 7, total: 14,
+    tickets: [
+      { title: "[DUVIDA] (Schinider) Automação não aparece na lista",         ch: 'sendi', ts: "1781548769.255919" },
+      { title: "[DUVIDA] (Landerson) Integração com Unnichat",                ch: 'sendi', ts: "1781540990.952309" },
+      { title: "[DUVIDA] (Thiago) Automações não constam em calendário e não dispararam", ch: 'sendi', ts: "1781538221.409229" },
+      { title: "[DUVIDA] (Automações) Dados da campanha não batem",           ch: 'sendi', ts: "1781537655.421839" },
+      { title: "[UNNI] (Craft) Processo de troca de nome na BM",             ch: 'sendi', ts: "1781530824.538619" },
+      { title: "[DUVIDA] (Gustavo) Mover grupos entre campanhas",             ch: 'sendi', ts: "1781530306.922749" },
+      { title: "[DUVIDA] (Erik) Importar grupo de outra campanha",            ch: 'sendi', ts: "1781525923.150369" },
+      { title: "[DUVIDA] (Schinider) Automação não aparece na lista",         ch: 'dev',   ts: "1781549497.345599" },
+      { title: "[DUVIDA] (Thiago) Automações não constam em calendário e não dispararam", ch: 'dev', ts: "1781539890.682729" },
+      { title: "[BUG?] Conta criadora não reconhecida como segundo membro",   ch: 'dev',   ts: "1781539264.349769" },
+      { title: "[BUG?] (Leticia Oliveira) Não salva link no BOT",             ch: 'dev',   ts: "1781539053.949029" },
+      { title: "[DUVIDA] (Automações) Dados da campanha não atualizam",       ch: 'dev',   ts: "1781538622.476149" },
+      { title: "[DUVIDA] (Gustavo) Mover grupos entre campanhas",             ch: 'dev',   ts: "1781534099.005389" },
+      { title: "[DUVIDA] (Erik) Importar grupo de outra campanha",            ch: 'dev',   ts: "1781526922.718059" },
+    ]
+  },
+  {
+    name: "Andressa", role: "Atendente CS", fin: 0, sendi: 7, dev: 1, total: 8,
+    tickets: [
+      { title: "[Creators] Alterar e-mail",                                   ch: 'sendi', ts: "1781556544.493089" },
+      { title: "[DÚVIDA] (Felipe) API que utilizamos (?)",                    ch: 'sendi', ts: "1781548824.615239" },
+      { title: "[Paulo] Envio travado",                                       ch: 'sendi', ts: "1781547636.363639" },
+      { title: "[DÚVIDA] (Eu Sou Rafael Guerra) SendIA",                      ch: 'sendi', ts: "1781543531.698689" },
+      { title: "[Vinícius] Alteração de e-mail",                              ch: 'sendi', ts: "1781542707.802409" },
+      { title: "[DÚVIDA] (THERA HORMONE) E-mail não chega",                  ch: 'sendi', ts: "1781534770.125409" },
+      { title: "[FORMADORES] Integração com a RD",                            ch: 'sendi', ts: "1781527932.668659" },
+      { title: "[BUG?] [Juan Antonio Gonzalez Lombana] Selecionar fuso horário", ch: 'dev', ts: "1781542865.059369" },
+    ]
+  },
+  {
+    name: "Braulio", role: "Atendente CS", fin: 3, sendi: 2, dev: 0, total: 5,
+    tickets: [
+      { title: "[BrothersTips] Upgrade conta extra",                          ch: 'fin',   ts: "1781548460.183169" },
+      { title: "[Luis] Upgrade Lite para Standard",                           ch: 'fin',   ts: "1781547230.410479" },
+      { title: "[GABRIEL] cancelamento de conta",                             ch: 'fin',   ts: "1781539001.840519" },
+      { title: "[DÚVIDA] (Edna) Ação sem status nenhum",                     ch: 'sendi', ts: "1781557469.775929" },
+      { title: "[DÚVIDA] (Mauro) Mensagem não chegando na automação de webhook com Hotmart", ch: 'sendi', ts: "1781550057.432759" },
+    ]
+  },
+  {
+    name: "Esdras", role: "Atendente CS", fin: 2, sendi: 0, dev: 1, total: 3,
+    tickets: [
+      { title: "[PATRIA] Upgrade de plano",                                   ch: 'fin',   ts: "1781553112.160749" },
+      { title: "[Matheus Benamor Flash] Upgrade contas extra",                ch: 'fin',   ts: "1781549150.978279" },
+      { title: "[BUG?] Disparo programado excluído e supostamente enviado mesmo assim", ch: 'dev', ts: "1781544188.787579" },
+    ]
+  },
+  {
+    name: "Raissa", role: "Supervisora", fin: 1, sendi: 0, dev: 1, total: 2,
+    tickets: [
+      { title: "[Emiliano] Dúvidas sobre liberação do plano",                 ch: 'fin',   ts: "1781526953.829689" },
+      { title: "[BUG?] Marcação de participantes",                            ch: 'dev',   ts: "1781528731.538859" },
+    ]
+  },
+  {
+    name: "Ezequiel", role: "Dev", fin: 0, sendi: 0, dev: 2, total: 2,
+    tickets: [
+      { title: "Redesign da barra de progresso",                              ch: 'dev',   ts: "1781562428.899639" },
+      { title: "Redesign da tela de automações",                              ch: 'dev',   ts: "1781526158.707539" },
+    ]
+  },
+  {
+    name: "Thiago G.", role: "Dev", fin: 0, sendi: 0, dev: 1, total: 1,
+    tickets: [
+      { title: "Reversão temporária do novo layout de automações",            ch: 'dev',   ts: "1781557097.090049" },
+    ]
+  },
+  {
+    name: "V. Mendes", role: "Atendente CS", fin: 1, sendi: 1, dev: 0, total: 2,
+    tickets: [
+      { title: "[Moriah College] Solicitou dia 30/05 o cancelamento por email",     ch: 'fin',   ts: "1781563370.718929" },
+      { title: "[ Elton] Integração com WhatsApp Business API oficial via Umbler", ch: 'sendi', ts: "1781559889.359379" },
+    ]
+  },
+];
+
+// ── Data: semana (08/06 – 15/06) ────────────────────────────────────────────
+const WEEK_LABELS = ['08/06', '09/06', '10/06', '11/06', '12/06', '13/06', '14/06', '15/06'];
+const WEEK_DATA = {
+  fin:   [5, 4, 6, 2, 4, 0, 0, 6],
+  sendi: [17, 13, 4, 5, 5, 2, 0, 17],
+  dev:   [8, 9, 5, 3, 3, 0, 0, 13],
+};
+const WEEK_TOP_AGENTS = [
+  { name: 'Gustavo',   total: 32 },
+  { name: 'Andressa',  total: 29 },
+  { name: 'Braulio',   total: 15 },
+  { name: 'V.Mendes',  total: 13 },
+  { name: 'Esdras',    total: 12 },
+  { name: 'Raissa',    total: 8  },
+  { name: 'V.Miraldo', total: 7  },
+  { name: 'Ezequiel',  total: 6  },
+  { name: 'Nara',      total: 3  },
+];
+
+// ── Data: tópicos hoje ────────────────────────────────────────────────────────
+const TOPICS_SENDI = [
+  { tema: "Automações", contagem: 5, descricao_curta: "Automações não aparecem, não disparam ou dados de campanha não batem" },
+  { tema: "Integrações externas", contagem: 4, descricao_curta: "Hotmart (webhook), WhatsApp Business via Umbler, RD Station, Unnichat" },
+  { tema: "Alteração de e-mail / dados", contagem: 3, descricao_curta: "Clientes solicitando troca de e-mail cadastrado" },
+  { tema: "Importar / mover grupos", contagem: 2, descricao_curta: "Dúvidas sobre movimentação de grupos entre campanhas" },
+  { tema: "Envio travado", contagem: 1, descricao_curta: "Mensagens presas sem disparar" },
+  { tema: "SendIA", contagem: 1, descricao_curta: "Dúvidas sobre a funcionalidade de IA do produto" },
+];
+const TOPICS_DEV = [
+  { tema: "BUGs em automações", contagem: 5, descricao_curta: "Bugs e dúvidas técnicas no módulo de automações — escalados do CS" },
+  { tema: "Disparos e ações", contagem: 3, descricao_curta: "Disparo excluído ainda enviado, link no BOT não salva" },
+  { tema: "Fuso horário e dados", contagem: 2, descricao_curta: "Bug na seleção de fuso horário e dados de campanha desatualizados" },
+  { tema: "Importar / mover grupos", contagem: 2, descricao_curta: "Mesmos casos escalados do cs-sendi-duvidas" },
+  { tema: "Marcação de participantes", contagem: 1, descricao_curta: "Bug na marcação de participantes em grupos" },
+];
+const TRAININGS = [
+  { icone: "🔄", titulo: "Troubleshooting de Automações", objetivo: "Capacitar o time a identificar e resolver as principais causas de falha em automações", justificativa: "5 chamados sobre automações hoje — tópico #1 do dia. Time está escalando casos evitáveis" },
+  { icone: "🔗", titulo: "Integrações: Hotmart, RD Station e WhatsApp Business", objetivo: "Treinar o time nas configurações das integrações mais solicitadas", justificativa: "4 chamados sobre integrações diferentes hoje, indicando baixo domínio do time nessa área" },
+  { icone: "📧", titulo: "Processo de alteração de dados do cliente", objetivo: "Padronizar o fluxo de atendimento para mudanças de e-mail e dados cadastrais", justificativa: "3 chamados sobre alteração de e-mail hoje — sem processo claro, gerando retrabalho" },
+  { icone: "🤖", titulo: "SendIA: funcionalidades e casos de uso para clientes", objetivo: "Capacitar o time para explicar e demonstrar o SendIA com segurança", justificativa: "Dúvidas recorrentes sobre o produto indicam que o time ainda não domina a funcionalidade" },
+  { icone: "📊", titulo: "Leitura de métricas e dados de campanhas", objetivo: "Ensinar o time a interpretar os dados de campanha e identificar inconsistências", justificativa: "Múltiplos chamados com 'dados não batem' — o time precisa entender o produto melhor para orientar o cliente" },
+];
+
+// ── Data: progresso (#dev-sendi-progresso) ───────────────────────────────────
+const PROGRESS_ITEMS = [
+  // Junho 2026
+  { date: "2026-06-11", text: "Escolher período das métricas das campanhas",                                ts: "1781205968.901189", author: "Thiago G." },
+  { date: "2026-06-11", text: "Export de leads de acordo com a filtragem",                                  ts: "1781195974.312509", author: "Thiago G." },
+  { date: "2026-06-11", text: "Selecionar múltiplas tags em leads",                                         ts: "1781195949.682249", author: "Thiago G." },
+  { date: "2026-06-11", text: "Intervalo para adicionar ADM/Entrar em grupo em diagnósticos",               ts: "1781192150.852649", author: "Thiago G." },
+  { date: "2026-06-10", text: "Inserir imagem com CTRL+V na mensagem e preview",                            ts: "1781124700.841479", author: "Thiago G." },
+  { date: "2026-06-10", text: "Melhorias no editor de mensagens",                                           ts: "1781108613.210209", author: "Thiago G." },
+  { date: "2026-06-10", text: "Intervalo entre actions na atualização automática de links no ban e uso de todas as contas", ts: "1781106655.940719", author: "Ezequiel" },
+  { date: "2026-06-10", text: "Aba de campanhas ativas",                                                    ts: "1781104718.780429", author: "Ezequiel" },
+  { date: "2026-06-04", text: "[SENDAPI] Novas rotas para ações",                                           ts: "1780592152.515079", author: "Thiago G." },
+  { date: "2026-06-03", text: "Comparação de desempenho por grupo em um disparo",                           ts: "1780534468.837179", author: "Thierry" },
+  { date: "2026-06-03", text: "Configurar fixar mensagem durante a criação da ação",                        ts: "1780516389.258959", author: "Thiago G." },
+  { date: "2026-06-03", text: "Export de leads",                                                            ts: "1780511973.416119", author: "Thiago G." },
+  { date: "2026-06-03", text: "Métricas das campanhas",                                                     ts: "1780511938.441919", author: "Thiago G." },
+  { date: "2026-06-03", text: "[para devs] Skill i18n",                                                     ts: "1780494312.283789", author: "Guilherme" },
+  { date: "2026-06-03", text: "Aviso de conta restringida",                                                 ts: "1780494080.299369", author: "Guilherme" },
+  { date: "2026-06-02", text: "Envio de ações para projetos",                                               ts: "1780434838.012109", author: "Thiago G." },
+  { date: "2026-06-02", text: "Enviar mensagem de template via SendAPI",                                    ts: "1780429577.389669", author: "Thiago G." },
+  { date: "2026-06-01", text: "Sistema de limitação de atendentes",                                         ts: "1780346972.326129", author: "Thiago G." },
+  { date: "2026-06-01", text: "Novos modelos de IA no SendIA",                                              ts: "1780345978.835539", author: "Guilherme" },
+  { date: "2026-06-01", text: "Novo gatilho de automação — Remover Lead",                                   ts: "1780329193.060119", author: "Thiago G." },
+  { date: "2026-06-01", text: "Integração com Webhook HubSpot",                                             ts: "1780323461.640979", author: "Thiago G." },
+  { date: "2026-06-01", text: "Checar automaticamente participantes duplicados",                             ts: "1780322896.794659", author: "Thiago G." },
+  { date: "2026-06-01", text: "Remover Lead de Campanhas Anteriores",                                       ts: "1780322735.369119", author: "Thiago G." },
+  // Maio 2026
+  { date: "2026-05-29", text: "Relatório de status de mensagens",                                           ts: "1780093768.567509", author: "Thiago G." },
+  { date: "2026-05-29", text: "Exibição dos dados de envio no Ligue Lead",                                  ts: "1780066830.130909", author: "Guilherme" },
+  { date: "2026-05-29", text: "Mensagem de erro mais útil",                                                 ts: "1780064633.305539", author: "Guilherme" },
+  { date: "2026-05-29", text: "LGPD",                                                                       ts: "1780064622.356459", author: "Guilherme" },
+  { date: "2026-05-28", text: "Novos tipos de eventos de Sendhooks",                                        ts: "1779998821.532929", author: "Thiago G." },
+  { date: "2026-05-28", text: "SendAssistant — Conta Desconectada por X minutos",                          ts: "1779985057.525529", author: "Thiago G." },
+  { date: "2026-05-28", text: "Bloqueio de chave por rate-limit e nova dashboard para gerenciar chaves bloqueadas", ts: "1779984943.867669", author: "Ezequiel" },
+  { date: "2026-05-27", text: "Aba com todos os grupos de um cliente na dashboard de admin (possível feature)", ts: "1779923503.666679", author: "Thierry" },
+  { date: "2026-05-27", text: "Atualizar Link dos Grupos",                                                   ts: "1779911193.775439", author: "Thiago G." },
+  { date: "2026-05-27", text: "Dashboard de domínios de convite (Uso Interno)",                             ts: "1779900779.366969", author: "Thiago G." },
+  { date: "2026-05-26", text: "Limpeza de dados de atividades (entradas e saídas)",                         ts: "1779815808.358219", author: "Thierry" },
+  { date: "2026-05-25", text: "Mostrar métricas de todas as campanhas do projeto juntas na tela de campanhas", ts: "1779741102.235189", author: "Thiago G." },
+  { date: "2026-05-25", text: "Evitando contabilizar dados de admins no Leadscoring",                       ts: "1779738770.513029", author: "Thierry" },
+  { date: "2026-05-22", text: "Solicitação de entrada em grupos — Finalizando implementação",               ts: "1779488053.887329", author: "Thierry" },
+  { date: "2026-05-20", text: "Busca de telefone na aba atividades da campanha",                            ts: "1779297545.117619", author: "Thierry" },
+  { date: "2026-05-15", text: "Filtrar leads por tag no sistema de leads",                                   ts: "1778878636.386119", author: "Thiago G." },
+  { date: "2026-05-15", text: "Integração com Ligue Lead (Ligações e SMS)",                                 ts: "1778872132.545469", author: "Guilherme" },
+  { date: "2026-05-15", text: "Servidor MCP",                                                               ts: "1778863714.522289", author: "Guilherme" },
+  { date: "2026-05-15", text: "Reprocessar ação com outra conta",                                           ts: "1778854997.472729", author: "Thiago G." },
+  { date: "2026-05-15", text: "Adicionar como número administrativo em participantes duplicados",            ts: "1778850089.345069", author: "Thiago G." },
+  { date: "2026-05-13", text: "[SENDAPI] Nova rota de envio de mensagens",                                  ts: "1778689901.351569", author: "Thiago G." },
+  { date: "2026-05-13", text: "[SENDAPI] Rotas de variáveis globais disponíveis",                           ts: "1778681095.200569", author: "Thiago G." },
+  { date: "2026-05-12", text: "[SENDAPI] Rota de enviar mensagem com PDF via SendAPI",                      ts: "1778604429.155369", author: "Thiago G." },
+  { date: "2026-05-12", text: "Possibilidade de ordenar lista por números administrativos mais recentes",    ts: "1778600123.829489", author: "Thiago G." },
+  { date: "2026-05-12", text: "Remover tag em gerenciamento de tag",                                        ts: "1778599442.667329", author: "Thiago G." },
+  { date: "2026-05-12", text: "Ajuste no texto ao tentar apagar pasta de link ou template de mensagem",     ts: "1778599344.532769", author: "Thiago G." },
+  { date: "2026-05-11", text: "Tela de mensagens recebidas nos grupos da campanha",                         ts: "1778534942.251209", author: "Thierry" },
+  { date: "2026-05-08", text: "Tela na dashboard para consultar o tempo de retenção de ações no armazenamento", ts: "1778285094.473119", author: "Ezequiel" },
+  // Abril 2026
+  { date: "2026-04-30", text: "Buscas na documentação do SENDAPI",                                          ts: "1777596093.070179", author: "Thiago G." },
+];
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+const overlay   = document.getElementById('modal-overlay');
+const modalBody = document.getElementById('modal-body');
+const modalTitle = document.getElementById('modal-title');
+const modalSub   = document.getElementById('modal-sub');
+
+document.getElementById('modal-close').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.remove('open'); });
+
+function openAgentModal(agent) {
+  modalTitle.textContent = agent.name;
+  modalSub.textContent = `${agent.total} ticket${agent.total !== 1 ? 's' : ''} hoje · ${agent.role}`;
+  if (!agent.tickets || agent.tickets.length === 0) {
+    modalBody.innerHTML = '<p class="modal-empty">Nenhum ticket registrado.</p>';
+  } else {
+    const chLabel = { fin: 'cs-fin', sendi: 'sendi', dev: 'dev' };
+    modalBody.innerHTML = agent.tickets.map(t => `
+      <div class="modal-ticket">
+        <span class="ch-badge ${t.ch}">${chLabel[t.ch] || t.ch}</span>
+        <a class="ticket-link" href="${slackLink(CHANNELS[t.ch], t.ts)}" target="_blank" rel="noopener">${esc(t.title)}</a>
+      </div>`).join('');
+  }
+  overlay.classList.add('open');
+}
+
+// ── Visão Geral — render functions (chamadas tanto no load quanto no refresh) ──
+let agentsChart, channelsChart;
+
+function renderOverview(agents) {
+  const sorted = [...agents].sort((a, b) => b.total - a.total);
+  const fin   = agents.reduce((s, a) => s + a.fin,   0);
+  const sendi = agents.reduce((s, a) => s + a.sendi, 0);
+  const dev   = agents.reduce((s, a) => s + a.dev,   0);
+  const total = fin + sendi + dev;
+
+  // Metric cards
+  document.getElementById('val-fin').textContent   = fin;
+  document.getElementById('val-sendi').textContent = sendi;
+  document.getElementById('val-dev').textContent   = dev;
+  document.querySelector('.header-total').textContent = `${total} tickets · hoje`;
+
+  // Agents bar chart
+  const labels = sorted.map(a => a.name);
+  const vals   = sorted.map(a => a.total);
+  const colors = sorted.map((_, i) => i === 0 ? '#FFDE07' : '#EAEAEA');
+  if (agentsChart) {
+    agentsChart.data.labels = labels;
+    agentsChart.data.datasets[0].data = vals;
+    agentsChart.data.datasets[0].backgroundColor = colors;
+    agentsChart.update();
+  } else {
+    agentsChart = new Chart(document.getElementById('c-agents').getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label: 'Tickets hoje', data: vals, backgroundColor: colors, borderRadius: 4 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10, family: 'Poppins' }, color: '#B3B3B3' }, grid: { color: '#F5F5F5' } },
+          y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Poppins' }, color: '#030404' } }
+        }
+      }
+    });
+  }
+
+  // Channels doughnut
+  if (channelsChart) {
+    channelsChart.data.datasets[0].data = [fin, sendi, dev];
+    channelsChart.update();
+  } else {
+    channelsChart = new Chart(document.getElementById('c-channels').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['cs-financeiro', 'cs-sendi-duvidas', 'dev-sendi-suporte'],
+        datasets: [{ data: [fin, sendi, dev], backgroundColor: ['#FFDE07', '#A259FF', '#032040'], borderWidth: 3, borderColor: '#FDFCF7' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10, family: 'Poppins' }, boxWidth: 10, padding: 10, color: '#B3B3B3' } } }
+      }
+    });
+  }
+
+  // Agents grid
+  const maxT = sorted[0]?.total || 1;
+  document.getElementById('agents-grid').innerHTML = sorted.map((a, i) => {
+    const parts = [];
+    if (a.fin)   parts.push(`💛 ${a.fin} fin`);
+    if (a.sendi) parts.push(`🟣 ${a.sendi} sendi`);
+    if (a.dev)   parts.push(`🔵 ${a.dev} dev`);
+    return `<div class="agent-card${i === 0 ? ' top' : ''}" data-idx="${i}">
+      <div class="agent-name">${esc(a.name)}</div>
+      <div class="agent-role">${esc(a.role)}</div>
+      <div class="agent-count">${a.total}</div>
+      <div class="agent-unit">tickets</div>
+      <div class="agent-channels">${parts.join(' · ')}</div>
+      <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.round(a.total/maxT*100)}%"></div></div>
+      <div class="agent-hint">ver tickets →</div>
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('.agent-card[data-idx]').forEach(el => {
+    el.addEventListener('click', () => openAgentModal(sorted[+el.dataset.idx]));
+  });
+}
+
+// Initial render with embedded snapshot
+renderOverview(AGENTS_TODAY);
+
+// ── Consolidado Semanal ───────────────────────────────────────────────────────
+new Chart(document.getElementById('c-weekly').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: WEEK_LABELS,
+    datasets: [
+      { label: 'cs-financeiro',   data: WEEK_DATA.fin,   backgroundColor: '#FFDE07', borderRadius: 2 },
+      { label: 'cs-sendi-duvidas', data: WEEK_DATA.sendi, backgroundColor: '#A259FF', borderRadius: 2 },
+      { label: 'dev-sendi-suporte', data: WEEK_DATA.dev,  backgroundColor: '#032040', borderRadius: 2 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 10, family: 'Poppins' }, boxWidth: 10, padding: 12, color: '#B3B3B3' } }
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10, family: 'Poppins' }, color: '#B3B3B3' } },
+      y: { stacked: true, beginAtZero: true, ticks: { stepSize: 5, font: { size: 10, family: 'Poppins' }, color: '#B3B3B3' }, grid: { color: '#F5F5F5' } }
+    }
+  }
+});
+
+const weekMax = WEEK_TOP_AGENTS[0]?.total || 1;
+document.getElementById('week-top-list').innerHTML = WEEK_TOP_AGENTS.map(a => `
+  <div class="week-top-item">
+    <span class="week-top-name">${esc(a.name)}</span>
+    <div class="week-top-bar-wrap"><div class="week-top-bar" style="width:${Math.round(a.total/weekMax*100)}%"></div></div>
+    <span class="week-top-val">${a.total}</span>
+  </div>`).join('');
+
+// ── Tópicos & Treinamento ─────────────────────────────────────────────────────
+function renderTopicList(id, topics, cls) {
+  document.getElementById(id).innerHTML = topics.map((t, i) => `
+    <div class="topic-item">
+      <span class="topic-num ${cls}">${i+1}</span>
+      <div>
+        <div class="topic-tema">${esc(t.tema)}</div>
+        <div class="topic-desc">${esc(t.descricao_curta)}</div>
+        <span class="topic-cnt">${t.contagem}x hoje</span>
+      </div>
+    </div>`).join('');
+}
+renderTopicList('topics-duvidas', TOPICS_SENDI, 'sendi');
+renderTopicList('topics-suporte', TOPICS_DEV, 'dev');
+
+document.getElementById('training-list').innerHTML = TRAININGS.map(t => `
+  <div class="training-item">
+    <div class="training-icon">${t.icone}</div>
+    <div>
+      <div class="training-title">${esc(t.titulo)}</div>
+      <div class="training-lbl">Objetivo</div>
+      <div class="training-txt">${esc(t.objetivo)}</div>
+      <div class="training-lbl" style="margin-top:5px">Por que agora</div>
+      <div class="training-txt">${esc(t.justificativa)}</div>
+    </div>
+  </div>`).join('');
+
+// ── Progresso da Ferramenta ───────────────────────────────────────────────────
+const MONTH_NAMES = { '2026-06': 'Junho 2026', '2026-05': 'Maio 2026', '2026-04': 'Abril 2026' };
+const byMonth = {};
+PROGRESS_ITEMS.forEach(item => {
+  const mo = item.date.slice(0, 7);
+  if (!byMonth[mo]) byMonth[mo] = [];
+  byMonth[mo].push(item);
+});
+
+document.getElementById('progress-list').innerHTML = Object.entries(byMonth)
+  .sort(([a],[b]) => b.localeCompare(a))
+  .map(([mo, items]) => `
+    <div class="month-group">
+      <div class="month-label">${MONTH_NAMES[mo] || mo}</div>
+      <div class="timeline">
+        ${items.map(item => {
+          const [y,m,d] = item.date.split('-');
+          const href = slackLink(CHANNELS.prog, item.ts);
+          return `<div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-date">${d}/${m}/${y}</div>
+            <a class="tl-link" href="${href}" target="_blank" rel="noopener">${esc(item.text)}</a>
+            <div class="tl-author">${esc(item.author)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+</script>
+</body>
+</html>

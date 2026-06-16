@@ -1,0 +1,9 @@
+{
+  "name": "sendflow-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dashboard de Suporte — Sendflow CS",
+  "engines": {
+    "node": ">=18"
+  }
+}
