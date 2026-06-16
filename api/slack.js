@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'SLACK_TOKEN not configured in Vercel environment variables' });
   }
 
-  const { action, channel, oldest, cursor, limit } = req.query;
+  const { action, channel, oldest, cursor, limit, ts } = req.query;
 
   let url;
   const params = new URLSearchParams();
@@ -23,12 +23,19 @@ export default async function handler(req, res) {
     params.set('limit', limit || '200');
     if (oldest) params.set('oldest', oldest);
     if (cursor) params.set('cursor', cursor);
+  } else if (action === 'replies') {
+    if (!channel || !ts) return res.status(400).json({ ok: false, error: 'channel and ts required' });
+    url = 'https://slack.com/api/conversations.replies';
+    params.set('channel', channel);
+    params.set('ts', ts);
+    params.set('limit', limit || '50');
+    if (cursor) params.set('cursor', cursor);
   } else if (action === 'users') {
     url = 'https://slack.com/api/users.list';
     params.set('limit', '200');
     if (cursor) params.set('cursor', cursor);
   } else {
-    return res.status(400).json({ ok: false, error: 'action must be "history" or "users"' });
+    return res.status(400).json({ ok: false, error: 'action must be "history", "replies" or "users"' });
   }
 
   try {

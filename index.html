@@ -214,9 +214,28 @@
     .tl-item:last-child { padding-bottom: 0; }
     .tl-dot { position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--yellow); border: 2px solid var(--white); box-shadow: 0 0 0 1.5px var(--yellow); }
     .tl-date { font-size: 10px; color: var(--gray-md); font-weight: 500; margin-bottom: 1px; }
-    .tl-link { font-size: 13px; font-weight: 600; color: var(--black); text-decoration: none; line-height: 1.4; display: block; }
+    .tl-title-row { display: flex; align-items: flex-start; gap: 8px; }
+    .tl-link { font-size: 13px; font-weight: 600; color: var(--black); text-decoration: none; line-height: 1.4; flex: 1; }
     .tl-link:hover { color: var(--purple); text-decoration: underline; }
-    .tl-author { font-size: 10px; color: var(--purple); font-weight: 600; margin-top: 2px; }
+    .tl-toggle {
+      font-size: 10px; font-weight: 600; background: none; flex-shrink: 0;
+      border: 1.5px solid var(--gray-lt); border-radius: 6px; padding: 2px 8px;
+      cursor: pointer; color: var(--gray-md); white-space: nowrap; margin-top: 1px;
+      font-family: 'Poppins', sans-serif; transition: border-color .15s, color .15s;
+    }
+    .tl-toggle:hover, .tl-toggle.open { border-color: var(--purple); color: var(--purple); }
+    .tl-author { font-size: 10px; color: var(--purple); font-weight: 600; margin-top: 4px; }
+    .tl-expand {
+      margin-top: 8px; padding: 10px 12px;
+      background: #F8F7FF; border-radius: 8px; border-left: 2px solid var(--purple);
+      display: none;
+    }
+    .tl-expand.open { display: block; }
+    .tl-reply { font-size: 11px; padding: 5px 0; border-bottom: 1px solid #EAE6FF; line-height: 1.4; }
+    .tl-reply:last-child { border-bottom: none; padding-bottom: 0; }
+    .tl-reply-author { font-weight: 700; color: var(--purple); font-size: 10px; margin-bottom: 1px; }
+    .tl-reply-text { color: #444; }
+    .tl-expand-msg { font-size: 11px; color: var(--gray-md); font-style: italic; }
 
     @media (max-width: 768px) {
       .cards-row, .charts-row, .topics-grid, .progress-stats, .week-stats, .week-grid { grid-template-columns: 1fr; }
@@ -417,13 +436,27 @@ async function liveRefresh() {
   btn.disabled = true;
   try {
     const todayTS = getTodayBRTTimestamp();
-    const [finMsgs, sendiMsgs, devMsgs] = await Promise.all([
+    const ninetyDaysAgo = Math.floor(Date.now() / 1000) - 90 * 24 * 3600;
+    const [finMsgs, sendiMsgs, devMsgs, progMsgs] = await Promise.all([
       fetchAllMessages(CHANNELS.fin,   todayTS),
       fetchAllMessages(CHANNELS.sendi, todayTS),
       fetchAllMessages(CHANNELS.dev,   todayTS),
+      fetchAllMessages(CHANNELS.prog,  ninetyDaysAgo),
     ]);
     const agents = processMessages({ fin: finMsgs, sendi: sendiMsgs, dev: devMsgs });
     renderOverview(agents);
+
+    // Progresso: converte mensagens brutas para o formato de items
+    const progItems = progMsgs
+      .filter(m => !m.subtype && m.text && m.text.trim() && !m.text.startsWith('<@'))
+      .map(m => ({
+        date:   tsToDateBRT(m.ts),
+        text:   cleanText(m.text),
+        ts:     m.ts,
+        author: TEAM_MEMBERS[m.user]?.name || 'Dev',
+      }))
+      .sort((a, b) => b.ts.localeCompare(a.ts));
+    renderProgressItems(progItems);
     const now = new Date();
     const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
     document.querySelector('.header-update').textContent = `Atualizado às ${hhmm}`;
@@ -887,32 +920,113 @@ document.getElementById('training-list').innerHTML = TRAININGS.map(t => `
   </div>`).join('');
 
 // ── Progresso da Ferramenta ───────────────────────────────────────────────────
-const MONTH_NAMES = { '2026-06': 'Junho 2026', '2026-05': 'Maio 2026', '2026-04': 'Abril 2026' };
-const byMonth = {};
-PROGRESS_ITEMS.forEach(item => {
-  const mo = item.date.slice(0, 7);
-  if (!byMonth[mo]) byMonth[mo] = [];
-  byMonth[mo].push(item);
-});
+const MONTH_NAMES = { '2026-06': 'Junho 2026', '2026-05': 'Maio 2026', '2026-04': 'Abril 2026', '2026-04': 'Abril 2026' };
+const threadCache = {};
 
-document.getElementById('progress-list').innerHTML = Object.entries(byMonth)
-  .sort(([a],[b]) => b.localeCompare(a))
-  .map(([mo, items]) => `
-    <div class="month-group">
-      <div class="month-label">${MONTH_NAMES[mo] || mo}</div>
-      <div class="timeline">
-        ${items.map(item => {
-          const [y,m,d] = item.date.split('-');
-          const href = slackLink(CHANNELS.prog, item.ts);
-          return `<div class="tl-item">
-            <div class="tl-dot"></div>
-            <div class="tl-date">${d}/${m}/${y}</div>
-            <a class="tl-link" href="${href}" target="_blank" rel="noopener">${esc(item.text)}</a>
-            <div class="tl-author">${esc(item.author)}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`).join('');
+function tsToDateBRT(ts) {
+  const brtMs = parseFloat(ts) * 1000 - 3 * 3600000;
+  return new Date(brtMs).toISOString().slice(0, 10);
+}
+
+function renderProgressItem(item) {
+  const [y, m, d] = item.date.split('-');
+  const href = slackLink(CHANNELS.prog, item.ts);
+  const expandId = 'exp-' + item.ts.replace('.', '_');
+  return `<div class="tl-item">
+    <div class="tl-dot"></div>
+    <div class="tl-date">${d}/${m}/${y}</div>
+    <div class="tl-title-row">
+      <a class="tl-link" href="${href}" target="_blank" rel="noopener">${esc(item.text)}</a>
+      <button class="tl-toggle" data-ts="${item.ts}" data-expand="${expandId}">▾ resumo</button>
+    </div>
+    <div class="tl-author">${esc(item.author)}</div>
+    <div class="tl-expand" id="${expandId}"></div>
+  </div>`;
+}
+
+function renderProgressItems(items) {
+  const byMonth = {};
+  items.forEach(item => {
+    const mo = item.date.slice(0, 7);
+    if (!byMonth[mo]) byMonth[mo] = [];
+    byMonth[mo].push(item);
+  });
+
+  document.getElementById('progress-list').innerHTML = Object.entries(byMonth)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([mo, grp]) => `
+      <div class="month-group">
+        <div class="month-label">${MONTH_NAMES[mo] || mo}</div>
+        <div class="timeline">${grp.map(renderProgressItem).join('')}</div>
+      </div>`).join('');
+
+  // Attach toggle listeners
+  document.querySelectorAll('.tl-toggle').forEach(btn => {
+    btn.addEventListener('click', () => toggleThread(btn));
+  });
+
+  // Update stats
+  const june = items.filter(i => i.date.startsWith('2026-06')).length;
+  const may  = items.filter(i => i.date.startsWith('2026-05')).length;
+  const statVals = document.querySelectorAll('#tab-progress .stat-mini-val');
+  if (statVals[0]) statVals[0].textContent = items.length;
+  if (statVals[1]) statVals[1].textContent = june;
+  if (statVals[2]) statVals[2].textContent = may;
+}
+
+async function toggleThread(btn) {
+  const ts = btn.dataset.ts;
+  const expand = document.getElementById(btn.dataset.expand);
+  const isOpen = expand.classList.contains('open');
+
+  if (isOpen) {
+    expand.classList.remove('open');
+    btn.textContent = '▾ resumo';
+    btn.classList.remove('open');
+    return;
+  }
+
+  btn.textContent = '...';
+  btn.classList.add('open');
+
+  if (threadCache[ts]) {
+    expand.innerHTML = renderReplies(threadCache[ts]);
+    expand.classList.add('open');
+    btn.textContent = '▴ fechar';
+    return;
+  }
+
+  try {
+    const p = new URLSearchParams({ action: 'replies', channel: CHANNELS.prog, ts });
+    const r = await fetch('/api/slack?' + p);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    const replies = (data.messages || []).slice(1).filter(m => !m.subtype && m.text);
+    threadCache[ts] = replies;
+    expand.innerHTML = renderReplies(replies);
+    expand.classList.add('open');
+    btn.textContent = '▴ fechar';
+  } catch (e) {
+    expand.innerHTML = `<div class="tl-expand-msg">Erro: ${esc(e.message)}</div>`;
+    expand.classList.add('open');
+    btn.textContent = '▾ resumo';
+    btn.classList.remove('open');
+  }
+}
+
+function renderReplies(replies) {
+  if (!replies.length) return '<div class="tl-expand-msg">Sem respostas na thread.</div>';
+  return replies.map(r => {
+    const author = TEAM_MEMBERS[r.user]?.name || 'Dev';
+    return `<div class="tl-reply">
+      <div class="tl-reply-author">${esc(author)}</div>
+      <div class="tl-reply-text">${esc(cleanText(r.text))}</div>
+    </div>`;
+  }).join('');
+}
+
+// Render inicial com dados estáticos embutidos
+renderProgressItems(PROGRESS_ITEMS);
 </script>
 </body>
 </html>
